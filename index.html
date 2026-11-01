@@ -402,7 +402,7 @@ function clearJoy(){
 }
 function updateJoy(e){
   const r=joyBase.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
-  const max=Math.min(r.width,r.height)*.34;
+  const max=Math.min(r.width,r.height)*.39;
   let dx=e.clientX-cx,dy=e.clientY-cy;
   const len=Math.hypot(dx,dy);
   if(len>max){dx=dx/len*max;dy=dy/len*max;}
@@ -417,7 +417,10 @@ joyBase.addEventListener("pointerdown",e=>{
   try{movePad.setPointerCapture(e.pointerId);}catch(_){}
   updateJoy(e);
 });
-joyBase.addEventListener("pointermove",e=>{if(e.pointerId===joyPointer){e.preventDefault();updateJoy(e);}});
+const joyMove=e=>{if(e.pointerId===joyPointer){e.preventDefault();updateJoy(e);}};
+joyBase.addEventListener("pointermove",joyMove);
+// Pointer capture is held by movePad, so iOS may retarget movement events here.
+movePad.addEventListener("pointermove",joyMove);
 const joyEnd=e=>{if(e.pointerId===joyPointer){e.preventDefault();clearJoy();}};
 joyBase.addEventListener("pointerup",joyEnd);
 joyBase.addEventListener("pointercancel",joyEnd);
