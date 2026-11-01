@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>ARENA FIGHT 2.5D</title>
 <style>
 *{box-sizing:border-box}
@@ -2356,5 +2356,25 @@ addEventListener("keydown",e=>{
   }
 });
 </script>
+
+<script>
+/* iOS/iPadOS: prevent browser zoom gestures while playing; keep multi-touch pointer controls. */
+(function(){
+  const controls = document.getElementById("touchControls");
+  const playing = () => !!(controls && controls.classList.contains("visible"));
+  ["gesturestart","gesturechange","gestureend"].forEach(type => {
+    document.addEventListener(type, e => {
+      if (playing()) e.preventDefault();
+    }, {passive:false});
+  });
+  document.addEventListener("touchmove", e => {
+    if (playing() && e.touches && e.touches.length > 1) e.preventDefault();
+  }, {passive:false});
+  document.addEventListener("dblclick", e => {
+    if (playing()) e.preventDefault();
+  }, {passive:false});
+})();
+</script>
+
 </body>
 </html>
