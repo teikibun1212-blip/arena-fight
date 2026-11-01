@@ -164,6 +164,7 @@ window.__peerLoadPromise = window.Peer ? Promise.resolve(true) : new Promise(res
   </div>
 </div>
 <div id="info">W = 奥（おく）　S = 手前（てまえ）　A/D = 左右（さゆう）　J = パンチ　K = スキル　L = 必殺技（ひっさつわざ）　SPACE = ジャスト回避（かいひ）</div>
+<div id="gameOverTouch" style="display:none;position:fixed;z-index:19;left:0;right:0;top:58%;transform:translateY(-50%);justify-content:center;gap:14px;pointer-events:auto;"><button id="touchRestart" type="button" style="font-size:18px;padding:14px 20px;border-radius:12px;border:2px solid #fff;background:#1d4ed8;color:white;">リスタート</button><button id="touchMenu" type="button" style="font-size:18px;padding:14px 20px;border-radius:12px;border:2px solid #fff;background:#374151;color:white;">メニューへ</button></div>
 <div id="touchControls" aria-label="タッチ操作">
   <div id="movePad" aria-label="移動スティック">
     <div id="joyBase"><div id="joyKnob"></div></div>
@@ -388,6 +389,32 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
+// 結果画面ではスマホ・タブレットにも操作ボタンを表示する。
+function restartCurrentGame(){
+  if(!game || netActive)return;
+  game=new Game(level,selectedCharacter,selectedCPUCharacter);
+  game.player._j=game.player._k=game.player._l=false;
+  game.enemy._j=game.enemy._k=game.enemy._l=false;
+  document.getElementById("gameOverTouch").style.display="none";
+}
+function returnToMainMenu(){
+  if(netActive){
+    if(netRole==="host")returnToPvpSelect();
+    else return;
+  }else{
+    backMenu();
+    document.getElementById("gameOverTouch").style.display="none";
+  }
+}
+document.getElementById("touchRestart").addEventListener("click",restartCurrentGame);
+document.getElementById("touchMenu").addEventListener("click",returnToMainMenu);
+addEventListener("keydown",e=>{
+  if(!game)return;
+  const k=e.key.toLowerCase();
+  if(k==="r" && !netActive && game.over){restartCurrentGame();e.preventDefault();}
+  if(k==="m" && !netActive && game.over){returnToMainMenu();e.preventDefault();}
+});
+
 // Touch controls: a MOBA-style analog joystick plus action buttons.
 // The joystick resolves to the same WASD booleans used by keyboard players,
 // so the network protocol remains identical for iPad and desktop clients.
@@ -512,6 +539,7 @@ function startGame(lv,char="rui",cpuChar="rui",fromNetwork=false){
 }
 
 function backMenu(){
+  const resultTouch=document.getElementById("gameOverTouch");if(resultTouch)resultTouch.style.display="none";
   game=null;
   setTouchControlsVisible(false);
   keys={};
@@ -2296,6 +2324,8 @@ function loop(now){
       if(Number.isFinite(st.time))game.time=st.time;
     }
     game.draw();
+    const resultTouch=document.getElementById("gameOverTouch");
+    if(resultTouch)resultTouch.style.display=(game.over && touchCapable && !netActive)?"flex":"none";
     if(netActive && netRole==="host" && game.over && !netReturnAt)netReturnAt=now+2200;
     if(netActive && netRole==="host" && netReturnAt && now>=netReturnAt)returnToPvpSelect();
   }
