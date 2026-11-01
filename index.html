@@ -425,10 +425,10 @@ let joyPointer=null,joyOriginX=0,joyOriginY=0;
 const joyStyle=document.createElement("style");
 joyStyle.textContent=`
 #movePad{position:fixed;inset:0;width:auto;height:auto;pointer-events:none;display:block;z-index:16}
-#actionPad{margin-left:auto}
+#actionPad{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));margin:0;z-index:17}
 #joyBase{display:none;position:fixed;width:124px;height:124px;left:0;top:0;margin:0;transform:translate(-50%,-50%);pointer-events:none;opacity:.78}
 #joyKnob{width:38px;height:38px;margin:-19px 0 0 -19px}
-@media(max-width:700px){#joyBase{width:116px;height:116px}#joyKnob{width:34px;height:34px;margin:-17px 0 0 -17px}}
+@media(max-width:700px){#actionPad{right:10px;bottom:max(10px,env(safe-area-inset-bottom))}#joyBase{width:116px;height:116px}#joyKnob{width:34px;height:34px;margin:-17px 0 0 -17px}}
 `;
 document.head.appendChild(joyStyle);
 function clearJoy(){
