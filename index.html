@@ -207,7 +207,7 @@ function learnedCPUAction(fighter,opponent){
 
 let keys={},game=null,level=1,selectedCharacter="rui",selectedCPUCharacter="rui",last=performance.now();
 
-let netPeer=null,netConn=null,netRole=null,netActive=false,netRemoteKeys={},netLastSend=0;
+let netPeer=null,netConn=null,netRole=null,netActive=false,netRemoteKeys={},netLastSend=0,netLastStateSend=0,netPendingState=null;
 let selectedPvpCharacter="rui",localReady=false,remoteReady=false,remoteCharacter="rui",netReturnAt=0;
 let gameMode="cpu",netStarted=false;
 const netSend=o=>{if(netConn&&netConn.open)netConn.send(o);};
@@ -234,7 +234,7 @@ function resetReadyState(){
   refreshPvpStatus();
 }
 function netReset(){
-  netActive=false;netRole=null;netRemoteKeys={};localReady=false;remoteReady=false;netStarted=false;
+  netActive=false;netRole=null;netRemoteKeys={};netPendingState=null;netLastStateSend=0;localReady=false;remoteReady=false;netStarted=false;
   if(netConn){try{netConn.close();}catch(e){} netConn=null;}
   if(netPeer){try{netPeer.destroy();}catch(e){} netPeer=null;}
 }
@@ -258,6 +258,7 @@ function netConnected(conn,role){
   conn.on("data",msg=>{
     if(!msg||typeof msg!=="object")return;
     if(msg.type==="keys")netRemoteKeys=msg.keys||{};
+    if(msg.type==="state" && role==="guest")netPendingState=msg;
     if(msg.type==="hello"){
       remoteCharacter=msg.char||"rui";
       if(role==="host")netSend({type:"welcome",char:selectedPvpCharacter});
@@ -2157,7 +2158,8 @@ class Game{
   drawUI(){
     // キーアイコンはクールタイム中に暗く、時間経過で明るくなり、使用可能になると発光。
     const y=478, boxW=58, boxH=48, gap=14;
-    const p=this.player;
+    // P2端末では、自分が操作する敵側ファイターのクールタイムを表示する。
+    const p=(netActive && netRole==="guest")?this.enemy:this.player;
     const items=[
       {key:"J", cd:p.char==="kage"?p.kageJCD:0, max:p.char==="kage"?1.5:0},
       {key:"K", cd:p.char==="kage"?p.counterCD:p.char==="shiba"?p.counterCD:p.char==="done"?p.doneKCD:p.kickCD, max:p.char==="kage"?(p.kageAssassinateReady?3:3):p.char==="rin"?4:p.char==="shiba"?6:p.char==="done"?.8:1},
@@ -2217,7 +2219,15 @@ class Game{
 function loop(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(game){
-    game.update(dt);game.draw();
+    game.update(dt);
+    // ホストから届いた最新状態を参加者側へ反映し、HP・座標・各種CTを一致させる。
+    if(netActive && netRole==="guest" && netPendingState){
+      const st=netPendingState;netPendingState=null;
+      if(st.player)Object.assign(game.player,st.player);
+      if(st.enemy)Object.assign(game.enemy,st.enemy);
+      if(typeof st.over==="boolean")game.over=st.over;
+    }
+    game.draw();
     if(netActive && game.over && !netReturnAt)netReturnAt=now+2200;
     if(netActive && netReturnAt && now>=netReturnAt)returnToPvpSelect();
   }
@@ -2225,6 +2235,11 @@ function loop(now){
     const sendKeys={};
     for(const k of ["w","a","s","d","j","k","l"," "])sendKeys[k]=!!keys[k];
     netSend({type:"keys",keys:sendKeys});netLastSend=now;
+  }
+  // ホストを正として約20回/秒、両ファイターの状態を参加者へ配信する。
+  if(game && netActive && netRole==="host" && netConn && netConn.open && now-netLastStateSend>50){
+    netSend({type:"state",player:game.player,enemy:game.enemy,over:game.over});
+    netLastStateSend=now;
   }
   requestAnimationFrame(loop);
 }
