@@ -211,7 +211,7 @@ let keys={},game=null,level=1,selectedCharacter="rui",selectedCPUCharacter="rui"
 let netPeer=null,netConn=null,netRole=null,netActive=false,netRemoteKeys={},netLastSend=0,netLastStateSend=0,netPendingState=null;
 let selectedPvpCharacter="rui",localReady=false,remoteReady=false,remoteCharacter="rui",netReturnAt=0;
 let gameMode="cpu",netStarted=false;
-const netSend=o=>{try{if(netConn&&netConn.open)netConn.send(o);}catch(e){console.warn("network send failed",e);}};
+const netSend=o=>{if(netConn&&netConn.open)netConn.send(o);};
 const netStatus=t=>{
   for(const id of ["lanStatus","lanStatusWait","joinStatus"]){
     const el=document.getElementById(id);if(el)el.textContent=t;
@@ -284,6 +284,8 @@ function netConnected(conn,role){
       startGame(msg.level||1,msg.hostChar,msg.guestChar,true);
     }
     if(msg.type==="rematch"){
+      game=null;netReturnAt=0;netPendingState=null;
+      setTouchControlsVisible(false);keys={};
       resetReadyState();
       enterPvpSelect();
     }
@@ -570,7 +572,10 @@ class Game{
       f.hp=Math.max(0,Math.min(f.maxHP,f.hp));
       if(f.hp<=0) f.dead=true;
     }
-    if(this.player.dead || this.enemy.dead){this.over=true;return;}
+    if(this.player.dead || this.enemy.dead){
+      if(!(netActive && netRole==="guest"))this.over=true;
+      return;
+    }
     this.time+=dt;
     if(netActive && netConn && netConn.open){
       const p1Keys=netRole==="host"?keys:netRemoteKeys;
@@ -2252,26 +2257,37 @@ function loop(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(game){
     game.update(dt);
-    // ホストのゲーム状態を参加者へ反映。HP・座標・攻撃状態・クールタイムを同期する。
+    // ホストの状態を正として参加者側へ反映。HP・被ダメージ・攻撃状態・
+    // 各ファイター固有のクールタイムを、プレイヤーごとに同期する。
     if(netActive && netRole==="guest" && netPendingState){
       const st=netPendingState;netPendingState=null;
-      if(st.player)Object.assign(game.player,st.player);
-      if(st.enemy)Object.assign(game.enemy,st.enemy);
+      const applyFighterState=(target,source)=>{
+        if(!target||!source||typeof source!=="object")return;
+        for(const [k,v] of Object.entries(source)){
+          if(v===null||["string","number","boolean"].includes(typeof v)){
+            target[k]=v;
+          }else if(Array.isArray(v)||typeof v==="object"){
+            try{target[k]=JSON.parse(JSON.stringify(v));}catch(e){}
+          }
+        }
+      };
+      applyFighterState(game.player,st.player);
+      applyFighterState(game.enemy,st.enemy);
       if(typeof st.over==="boolean")game.over=st.over;
       if(Number.isFinite(st.time))game.time=st.time;
     }
     game.draw();
-    if(netActive && game.over && !netReturnAt)netReturnAt=now+2200;
-    if(netActive && netReturnAt && now>=netReturnAt)returnToPvpSelect();
+    if(netActive && netRole==="host" && game.over && !netReturnAt)netReturnAt=now+2200;
+    if(netActive && netRole==="host" && netReturnAt && now>=netReturnAt)returnToPvpSelect();
   }
   if(netActive && netConn && netConn.open && now-netLastSend>35){
     const sendKeys={};
     for(const k of ["w","a","s","d","j","k","l"," "])sendKeys[k]=!!keys[k];
     netSend({type:"keys",keys:sendKeys});netLastSend=now;
   }
-  // ホストを正として約15回/秒、ファイターの状態を送信（入力通信とは独立）。
+  // ホストを正として約15回/秒、両ファイターの状態を参加者へ送信。
   if(game && netActive && netRole==="host" && netConn && netConn.open && now-netLastStateSend>66){
-    const pack=f=>{const o={};for(const [k,v] of Object.entries(f)){if(v===null||["string","number","boolean"].includes(typeof v))o[k]=v;else if(k==="ai"&&v&&typeof v==="object")o.ai={...v};}return o;};
+    const pack=f=>JSON.parse(JSON.stringify(f));
     netSend({type:"state",player:pack(game.player),enemy:pack(game.enemy),over:game.over,time:game.time});
     netLastStateSend=now;
   }
