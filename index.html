@@ -2368,11 +2368,18 @@ addEventListener("keydown",e=>{
     }, {passive:false});
   });
   document.addEventListener("touchmove", e => {
+    // Prevent both pinch zoom and Safari's touch-driven page movement while playing.
+    if (playing()) e.preventDefault();
+  }, {passive:false, capture:true});
+  document.addEventListener("touchstart", e => {
     if (playing() && e.touches && e.touches.length > 1) e.preventDefault();
-  }, {passive:false});
+  }, {passive:false, capture:true});
   document.addEventListener("dblclick", e => {
     if (playing()) e.preventDefault();
-  }, {passive:false});
+  }, {passive:false, capture:true});
+  document.addEventListener("contextmenu", e => {
+    if (playing()) e.preventDefault();
+  }, {capture:true});
 })();
 </script>
 
