@@ -12,16 +12,20 @@ canvas{background:#111827;border:2px solid #374151;width:min(100vw,161.29vh);hei
 #touchControls{display:none;position:fixed;inset:auto 0 max(10px,env(safe-area-inset-bottom)) 0;z-index:15;pointer-events:none;align-items:flex-end;justify-content:space-between;padding:0 18px;user-select:none;-webkit-user-select:none}
 #touchControls.visible{display:flex}
 .touchCluster{display:grid;gap:9px;pointer-events:auto}
-#movePad{grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,58px)}
+#movePad{width:156px;height:156px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none}
+#joyBase{width:148px;height:148px;border-radius:50%;position:relative;border:2px solid rgba(219,234,254,.62);background:radial-gradient(circle,rgba(148,163,184,.24) 0 32%,rgba(30,41,59,.78) 68%,rgba(15,23,42,.9) 100%);box-shadow:0 5px 18px #0009,inset 0 0 18px #ffffff18;touch-action:none}
+#joyBase:before,#joyBase:after{content:"";position:absolute;background:#cbd5e133;pointer-events:none}
+#joyBase:before{width:1px;height:100%;left:50%;top:0}
+#joyBase:after{height:1px;width:100%;top:50%;left:0}
+#joyKnob{position:absolute;width:62px;height:62px;left:50%;top:50%;margin:-31px 0 0 -31px;border-radius:50%;border:2px solid rgba(255,255,255,.82);background:radial-gradient(circle at 35% 30%,#94a3b8,#334155 65%,#0f172a);box-shadow:0 4px 12px #000b,inset 0 2px 5px #ffffff55;pointer-events:none;transform:translate(0,0)}
 #actionPad{grid-template-columns:repeat(2,68px);grid-template-rows:repeat(2,58px)}
-.touchBtn{margin:0;padding:0;border:2px solid rgba(255,255,255,.55);border-radius:15px;background:rgba(25,43,67,.86);color:#fff;font-size:20px;font-weight:bold;min-width:0;min-height:0;touch-action:none;box-shadow:0 3px 8px #0008}
-.touchBtn:active,.touchBtn.pressed{background:#2563eb;border-color:#bfdbfe}
-#movePad [data-key="w"]{grid-column:2;grid-row:1}
-#movePad [data-key="a"]{grid-column:1;grid-row:2}
-#movePad [data-key="s"]{grid-column:2;grid-row:2}
-#movePad [data-key="d"]{grid-column:3;grid-row:2}
-#actionPad .touchBtn{font-size:17px}
-@media(max-width:700px){#movePad{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px)}#actionPad{grid-template-columns:repeat(2,60px);grid-template-rows:repeat(2,52px)}#touchControls{padding:0 10px}}
+.touchBtn{margin:0;padding:0;border:2px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(25,43,67,.88);color:#fff;font-size:17px;font-weight:bold;min-width:0;min-height:0;touch-action:none;box-shadow:0 3px 8px #0008}
+#actionPad [data-key="j"]{width:68px;height:68px;background:rgba(37,99,235,.88)}
+#actionPad [data-key="k"]{width:62px;height:62px}
+#actionPad [data-key="l"]{width:76px;height:76px;background:rgba(153,27,27,.9)}
+#actionPad [data-key=" "]{width:58px;height:58px}
+.touchBtn:active,.touchBtn.pressed{filter:brightness(1.35);border-color:#bfdbfe}
+@media(max-width:700px){#movePad{width:140px;height:140px}#joyBase{width:132px;height:132px}#joyKnob{width:56px;height:56px;margin:-28px 0 0 -28px}#actionPad{grid-template-columns:repeat(2,60px);grid-template-rows:repeat(2,54px)}#actionPad .touchBtn{font-size:14px}#actionPad [data-key="j"]{width:60px;height:60px}#actionPad [data-key="k"]{width:54px;height:54px}#actionPad [data-key="l"]{width:68px;height:68px}#actionPad [data-key=" "]{width:52px;height:52px}#touchControls{padding:0 10px}}
 @media(orientation:portrait) and (max-width:900px){#wrap{align-items:flex-start;padding-top:8px}canvas{width:100vw}}
 body.touch-playing{overflow:hidden;overscroll-behavior:none}
 #menu{
@@ -161,11 +165,8 @@ window.__peerLoadPromise = window.Peer ? Promise.resolve(true) : new Promise(res
 </div>
 <div id="info">W = 奥（おく）　S = 手前（てまえ）　A/D = 左右（さゆう）　J = パンチ　K = スキル　L = 必殺技（ひっさつわざ）　SPACE = ジャスト回避（かいひ）</div>
 <div id="touchControls" aria-label="タッチ操作">
-  <div id="movePad" class="touchCluster">
-    <button class="touchBtn" data-key="w" aria-label="奥">↑</button>
-    <button class="touchBtn" data-key="a" aria-label="左">←</button>
-    <button class="touchBtn" data-key="s" aria-label="手前">↓</button>
-    <button class="touchBtn" data-key="d" aria-label="右">→</button>
+  <div id="movePad" aria-label="移動スティック">
+    <div id="joyBase"><div id="joyKnob"></div></div>
   </div>
   <div id="actionPad" class="touchCluster">
     <button class="touchBtn" data-key="j">J<br>パンチ</button>
@@ -210,7 +211,7 @@ let keys={},game=null,level=1,selectedCharacter="rui",selectedCPUCharacter="rui"
 let netPeer=null,netConn=null,netRole=null,netActive=false,netRemoteKeys={},netLastSend=0,netLastStateSend=0,netPendingState=null;
 let selectedPvpCharacter="rui",localReady=false,remoteReady=false,remoteCharacter="rui",netReturnAt=0;
 let gameMode="cpu",netStarted=false;
-const netSend=o=>{if(netConn&&netConn.open)netConn.send(o);};
+const netSend=o=>{try{if(netConn&&netConn.open)netConn.send(o);}catch(e){console.warn("network send failed",e);}};
 const netStatus=t=>{
   for(const id of ["lanStatus","lanStatusWait","joinStatus"]){
     const el=document.getElementById(id);if(el)el.textContent=t;
@@ -385,25 +386,56 @@ addEventListener("keydown",e=>{
 });
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-// iPad / iPhone touch controls. Pointer events allow multiple buttons to be held together.
-document.querySelectorAll("#touchControls [data-key]").forEach(btn=>{
+// Touch controls: a MOBA-style analog joystick plus action buttons.
+// The joystick resolves to the same WASD booleans used by keyboard players,
+// so the network protocol remains identical for iPad and desktop clients.
+const touchCapable = (navigator.maxTouchPoints||0)>0 || matchMedia("(pointer: coarse)").matches;
+const movePad=document.getElementById("movePad"),joyBase=document.getElementById("joyBase"),joyKnob=document.getElementById("joyKnob");
+let joyPointer=null;
+function clearJoy(){
+  joyPointer=null;
+  for(const k of ["w","a","s","d"])keys[k]=false;
+  joyKnob.style.transform="translate(0px,0px)";
+}
+function updateJoy(e){
+  const r=joyBase.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const max=Math.min(r.width,r.height)*.34;
+  let dx=e.clientX-cx,dy=e.clientY-cy;
+  const len=Math.hypot(dx,dy);
+  if(len>max){dx=dx/len*max;dy=dy/len*max;}
+  joyKnob.style.transform=`translate(${dx}px,${dy}px)`;
+  const nx=dx/max,ny=dy/max,dead=.22;
+  keys.a=nx < -dead;keys.d=nx > dead;
+  keys.w=ny < -dead;keys.s=ny > dead;
+}
+joyBase.addEventListener("pointerdown",e=>{
+  if(!game)return;
+  e.preventDefault();joyPointer=e.pointerId;
+  try{joyBase.setPointerCapture(e.pointerId);}catch(_){}
+  updateJoy(e);
+});
+joyBase.addEventListener("pointermove",e=>{if(e.pointerId===joyPointer){e.preventDefault();updateJoy(e);}});
+const joyEnd=e=>{if(e.pointerId===joyPointer){e.preventDefault();clearJoy();}};
+joyBase.addEventListener("pointerup",joyEnd);
+joyBase.addEventListener("pointercancel",joyEnd);
+joyBase.addEventListener("lostpointercapture",joyEnd);
+
+document.querySelectorAll("#actionPad [data-key]").forEach(btn=>{
   const key=btn.dataset.key;
   const press=e=>{
-    e.preventDefault();
-    if(!game)return;
+    e.preventDefault();if(!game)return;
     try{btn.setPointerCapture(e.pointerId);}catch(_){}
     keys[key]=true;btn.classList.add("pressed");
   };
   const release=e=>{
-    e.preventDefault();
-    keys[key]=false;btn.classList.remove("pressed");
+    e.preventDefault();keys[key]=false;btn.classList.remove("pressed");
   };
   btn.addEventListener("pointerdown",press);
   btn.addEventListener("pointerup",release);
   btn.addEventListener("pointercancel",release);
   btn.addEventListener("lostpointercapture",release);
 });
-addEventListener("blur",()=>{keys={};document.querySelectorAll("#touchControls .touchBtn").forEach(b=>b.classList.remove("pressed"));});
+addEventListener("blur",()=>{keys={};clearJoy();document.querySelectorAll("#touchControls .touchBtn").forEach(b=>b.classList.remove("pressed"));});
 document.addEventListener("contextmenu",e=>{if(e.target.closest("#touchControls"))e.preventDefault();});
 
 document.getElementById("levels").innerHTML=[1,2,3,4,5].map(n=>`<button type="button" data-level="${n}">LEVEL ${n}</button>`).join("")+`<button type="button" data-level="6">鬼</button>`;
@@ -442,9 +474,10 @@ document.querySelectorAll("#levels button").forEach(btn=>{
 });
 
 function setTouchControlsVisible(visible){
-  document.getElementById("touchControls").classList.toggle("visible",!!visible);
-  document.body.classList.toggle("touch-playing",!!visible);
-  if(!visible){keys={};document.querySelectorAll("#touchControls .touchBtn").forEach(b=>b.classList.remove("pressed"));}
+  const show=!!visible&&touchCapable;
+  document.getElementById("touchControls").classList.toggle("visible",show);
+  document.body.classList.toggle("touch-playing",show);
+  if(!show){keys={};clearJoy();document.querySelectorAll("#touchControls .touchBtn").forEach(b=>b.classList.remove("pressed"));}
 }
 function startGame(lv,char="rui",cpuChar="rui",fromNetwork=false){
   level=lv;
@@ -2158,7 +2191,6 @@ class Game{
   drawUI(){
     // キーアイコンはクールタイム中に暗く、時間経過で明るくなり、使用可能になると発光。
     const y=478, boxW=58, boxH=48, gap=14;
-    // P2端末では、自分が操作する敵側ファイターのクールタイムを表示する。
     const p=(netActive && netRole==="guest")?this.enemy:this.player;
     const items=[
       {key:"J", cd:p.char==="kage"?p.kageJCD:0, max:p.char==="kage"?1.5:0},
@@ -2220,12 +2252,13 @@ function loop(now){
   const dt=Math.min(.033,(now-last)/1000);last=now;
   if(game){
     game.update(dt);
-    // ホストから届いた最新状態を参加者側へ反映し、HP・座標・各種CTを一致させる。
+    // ホストのゲーム状態を参加者へ反映。HP・座標・攻撃状態・クールタイムを同期する。
     if(netActive && netRole==="guest" && netPendingState){
       const st=netPendingState;netPendingState=null;
       if(st.player)Object.assign(game.player,st.player);
       if(st.enemy)Object.assign(game.enemy,st.enemy);
       if(typeof st.over==="boolean")game.over=st.over;
+      if(Number.isFinite(st.time))game.time=st.time;
     }
     game.draw();
     if(netActive && game.over && !netReturnAt)netReturnAt=now+2200;
@@ -2236,9 +2269,10 @@ function loop(now){
     for(const k of ["w","a","s","d","j","k","l"," "])sendKeys[k]=!!keys[k];
     netSend({type:"keys",keys:sendKeys});netLastSend=now;
   }
-  // ホストを正として約20回/秒、両ファイターの状態を参加者へ配信する。
-  if(game && netActive && netRole==="host" && netConn && netConn.open && now-netLastStateSend>50){
-    netSend({type:"state",player:game.player,enemy:game.enemy,over:game.over});
+  // ホストを正として約15回/秒、ファイターの状態を送信（入力通信とは独立）。
+  if(game && netActive && netRole==="host" && netConn && netConn.open && now-netLastStateSend>66){
+    const pack=f=>{const o={};for(const [k,v] of Object.entries(f)){if(v===null||["string","number","boolean"].includes(typeof v))o[k]=v;else if(k==="ai"&&v&&typeof v==="object")o.ai={...v};}return o;};
+    netSend({type:"state",player:pack(game.player),enemy:pack(game.enemy),over:game.over,time:game.time});
     netLastStateSend=now;
   }
   requestAnimationFrame(loop);
